@@ -117,7 +117,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
     for elem in tokens.iter_mut() {
         if let TokenSpec::Operator(_) = elem.spec {
             if !operators.contains_key(&elem.cont) {
-                return Err(anyhow!("Wrong expression"));
+                return Err(anyhow!("Invalid expression"));
             } else {
                 elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().clone());
             }
@@ -156,7 +156,7 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
                 stack.push_back(tok);
             },
             TokenSpec::None => {
-                return Err(anyhow!("Wrong expression"));
+                return Err(anyhow!("Invalid expression"));
             }
         }
     }
@@ -168,6 +168,31 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
 }
 
 fn parse(tokens: &Vec<Token>) -> Result<f64> {
+    fn get_ops(stack: &mut VecDeque<f64>, op_count: u8) -> Result<Vec<f64>> {
+        match op_count {
+            0 => return Ok(vec![] as Vec<f64>), // weird but ok
+            1 => {
+                let op = stack.pop_back();
+                if op.is_some() {
+                    return Ok(vec![op.unwrap()]);
+                } else {
+                    return Err(anyhow!("Invalid expression"));
+                }
+            },
+            2 => {
+                let (op2, op1) = (stack.pop_back(), stack.pop_back());
+                if op1.is_some() && op2.is_some() {
+                    return Ok(vec![op1.unwrap(), op2.unwrap()]);
+                } else {
+                    return Err(anyhow!("Invalid expression"));
+                }
+            },
+            _ => {
+                unreachable!();
+            },
+        }
+    }
+
     let mut stack: VecDeque<f64> = VecDeque::new();
 
     for tok in tokens {
@@ -178,33 +203,51 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
             TokenSpec::Operator(_) => {
                 match tok.cont.as_str() {
                     "+" => {
-                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
-                        stack.push_back(op1 + op2);
+                        let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0] + ops[1]);
                     },
                     "-" => {
-                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
-                        stack.push_back(op1 - op2);
+                        let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0] - ops[1]);
                     },
                     "*" => {
-                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
-                        stack.push_back(op1 * op2);
+                        let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0] * ops[1]);
                     },
                     "/" => {
-                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
-                        stack.push_back(op1 / op2);
+                       let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0] / ops[1]);
+                    },
+                    "rt" => {
+                        let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[1].powf((1 as f64) / ops[0]));
                     },
                     "sqrt" => {
-                        let op1 = stack.pop_back().unwrap();
-                        stack.push_back(op1.sqrt() as f64);
+                        let ops = get_ops(&mut stack, 1);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0].sqrt() as f64);
                     },
                     "^" => {
-                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
-                        stack.push_back(op1.powf(op2));
+                        let ops = get_ops(&mut stack, 2);
+                        if ops.is_err() {  return Err(ops.unwrap_err()); }
+                        let ops = ops.unwrap();
+                        stack.push_back(ops[0].powf(ops[1]));
                     }
-                    _ => return Err(anyhow!("Wrong expression")),
+                    _ => return Err(anyhow!("Invalid expression")),
                 }
             },
-            _ => return Err(anyhow!("Wrong expression")),
+            _ => return Err(anyhow!("Invalid expression")),
         }
     }
 
@@ -218,6 +261,7 @@ fn main() {
         ("*", 2),
         ("/", 2),
         ("^", 3),
+        ("rt", 3),
         ("sqrt", 3),
     ].into_iter().map(|(k, v)| { (k.to_string(), v) }).collect();
 
@@ -228,11 +272,23 @@ fn main() {
     }
     let expr = args[1..].join("").replace(" ", "");
 
-    let tokens = tokenize(&expr, &operators).unwrap();
+    let tokens = tokenize(&expr, &operators);
+    if tokens.is_err() {
+        println!("{}", tokens.unwrap_err()); return;
+    }
+    let tokens = tokens.unwrap();
     
-    let to_parse = convert_to_rpn(tokens).unwrap();
+    let to_parse = convert_to_rpn(tokens);
+    if to_parse.is_err() {
+        println!("{}", to_parse.unwrap_err()); return;
+    }
+    let to_parse = to_parse.unwrap();
 
-    let answer = parse(&to_parse).unwrap();
+    let answer = parse(&to_parse);
+    if answer.is_err() {
+        println!("{}", answer.unwrap_err()); return;
+    }
+    let answer = answer.unwrap();
 
     println!("{}", answer);
 }
