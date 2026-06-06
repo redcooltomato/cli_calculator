@@ -188,7 +188,7 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                 }
             },
             _ => {
-                unreachable!();
+                unreachable!(); // todo?
             },
         }
     }
@@ -224,18 +224,27 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                        let ops = get_ops(&mut stack, 2);
                         if ops.is_err() {  return Err(ops.unwrap_err()); }
                         let ops = ops.unwrap();
+                        if ops[1] == 0.0 {
+                            return Err(anyhow!("Can't divide by zero"));
+                        }
                         stack.push_back(ops[0] / ops[1]);
                     },
                     "rt" => {
                         let ops = get_ops(&mut stack, 2);
                         if ops.is_err() {  return Err(ops.unwrap_err()); }
                         let ops = ops.unwrap();
-                        stack.push_back(ops[1].powf((1 as f64) / ops[0]));
+                        if ops[1] < 0.0 && (ops[0] % 2.0 == 0.0) {
+                            return Err(anyhow!("Can't get an even root of a negative number"));
+                        }
+                        stack.push_back(ops[1].powf(1.0 / ops[0]));
                     },
                     "sqrt" => {
                         let ops = get_ops(&mut stack, 1);
                         if ops.is_err() {  return Err(ops.unwrap_err()); }
                         let ops = ops.unwrap();
+                        if ops[0] < 0.0 {
+                            return Err(anyhow!("Can't get a square root of a negative number"));
+                        }
                         stack.push_back(ops[0].sqrt() as f64);
                     },
                     "^" => {
@@ -260,9 +269,9 @@ fn main() {
         ("-", 1),
         ("*", 2),
         ("/", 2),
-        ("^", 3),
         ("rt", 3),
         ("sqrt", 3),
+        ("^", 3),
     ].into_iter().map(|(k, v)| { (k.to_string(), v) }).collect();
 
     let args : Vec<String> = env::args().collect();
