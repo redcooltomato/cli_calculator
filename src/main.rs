@@ -117,7 +117,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
     for elem in tokens.iter_mut() {
         if let TokenSpec::Operator(_) = elem.spec {
             if !operators.contains_key(&elem.cont) {
-                return Err(anyhow!("Wrong expression!"));
+                return Err(anyhow!("Wrong expression"));
             } else {
                 elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().clone());
             }
@@ -156,7 +156,7 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
                 stack.push_back(tok);
             },
             TokenSpec::None => {
-                return Err(anyhow!("Wrong expression!"));
+                return Err(anyhow!("Wrong expression"));
             }
         }
     }
@@ -165,6 +165,50 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
     }
 
     Ok(to_parse)
+}
+
+fn parse(tokens: &Vec<Token>) -> Result<f64> {
+    let mut stack: VecDeque<f64> = VecDeque::new();
+
+    for tok in tokens {
+        match tok.spec {
+            TokenSpec::Number => {
+                stack.push_back(tok.cont.parse().unwrap());
+            },
+            TokenSpec::Operator(_) => {
+                match tok.cont.as_str() {
+                    "+" => {
+                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
+                        stack.push_back(op1 + op2);
+                    },
+                    "-" => {
+                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
+                        stack.push_back(op1 - op2);
+                    },
+                    "*" => {
+                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
+                        stack.push_back(op1 * op2);
+                    },
+                    "/" => {
+                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
+                        stack.push_back(op1 / op2);
+                    },
+                    "sqrt" => {
+                        let op1 = stack.pop_back().unwrap();
+                        stack.push_back(op1.sqrt() as f64);
+                    },
+                    "^" => {
+                        let (op2, op1) = (stack.pop_back().unwrap(), stack.pop_back().unwrap());
+                        stack.push_back(op1.powf(op2));
+                    }
+                    _ => return Err(anyhow!("Wrong expression")),
+                }
+            },
+            _ => return Err(anyhow!("Wrong expression")),
+        }
+    }
+
+    Ok(*stack.front().unwrap())
 }
 
 fn main() {
@@ -186,6 +230,9 @@ fn main() {
 
     let tokens = tokenize(&expr, &operators).unwrap();
     
-    let to_parse = convert_to_rpn(tokens);
-    
+    let to_parse = convert_to_rpn(tokens).unwrap();
+
+    let answer = parse(&to_parse).unwrap();
+
+    println!("{}", answer);
 }
