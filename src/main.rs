@@ -74,7 +74,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
 
         match buffmode {
             BuffMode::Digs => {
-                if !c.is_ascii_digit() {
+                if !c.is_ascii_digit() || c == '.' {
                     if !buf.is_empty() {
                         tokens.push(Token {
                             spec: buff_mode_to_spec(buffmode), cont: buf
@@ -85,7 +85,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
                 }
             },
             BuffMode::Ops => {
-                if c.is_ascii_digit() {
+                if c.is_ascii_digit() || c == '.' {
                     if !buf.is_empty() {
                         tokens.push(Token {
                             spec: buff_mode_to_spec(buffmode), cont: buf
@@ -114,6 +114,17 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
         }
     }
 
+    let mut new_tokens: Vec<Token> = Vec::new();
+    for i in 0..(tokens.len() - 1) {
+        if &tokens[i].cont == "-" && tokens[i + 1].spec == TokenSpec::Number {
+            tokens[i + 1].cont.insert(0, '-');
+        } else {
+            new_tokens.push(tokens[i].clone());
+        }
+    }
+    new_tokens.push(tokens.last().cloned().unwrap());
+    tokens = new_tokens;
+
     for elem in tokens.iter_mut() {
         if let TokenSpec::Operator(_) = elem.spec {
             if !operators.contains_key(&elem.cont) {
@@ -130,6 +141,8 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
 fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
     let mut to_parse: Vec<Token> = Vec::new();
     let mut stack: VecDeque<Token> = VecDeque::new();
+    let left_par = "(".to_owned(); // it is used too often here, idk
+
 
     for tok in tokens {
         match tok.spec {
@@ -137,19 +150,19 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
                 to_parse.push(tok);
             },
             TokenSpec::Bracket => {
-                if tok.cont == '('.to_string() {
+                if tok.cont == left_par.to_owned() {
                     stack.push_back(tok);
                 } else {
-                    while !stack.is_empty() && !(stack.back().unwrap().cont == '('.to_string()) {
+                    while !stack.is_empty() && !(stack.back().unwrap().cont == left_par.to_owned()) {
                         to_parse.push(stack.pop_back().unwrap());
                     }
-                    if !stack.is_empty() && stack.back().unwrap().cont == '('.to_string() {
+                    if !stack.is_empty() && stack.back().unwrap().cont == left_par.to_owned() {
                         stack.pop_back();
                     }
                 }
             },
             TokenSpec::Operator(prior) => {
-                while !stack.is_empty() && stack.back().unwrap().cont != '('.to_string()
+                while !stack.is_empty() && stack.back().unwrap().cont != left_par.to_owned()
                 && stack.back().unwrap().spec.get_priority_if_operator().unwrap() >= prior {
                     to_parse.push(stack.pop_back().unwrap());
                 }
@@ -272,7 +285,7 @@ fn main() {
         ("rt", 3),
         ("sqrt", 3),
         ("^", 3),
-    ].into_iter().map(|(k, v)| { (k.to_string(), v) }).collect();
+    ].into_iter().map(|(k, v)| { (k.to_owned(), v) }).collect();
 
     let args : Vec<String> = env::args().collect();
     if args.len() <= 1 {
@@ -292,7 +305,7 @@ fn main() {
         println!("{}", to_parse.unwrap_err()); return;
     }
     let to_parse = to_parse.unwrap();
-
+    
     let answer = parse(&to_parse);
     if answer.is_err() {
         println!("{}", answer.unwrap_err()); return;
