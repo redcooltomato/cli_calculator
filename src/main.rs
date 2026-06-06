@@ -1,11 +1,12 @@
-use std::{env, collections::HashSet};
+use std::{collections::{HashMap, HashSet}, env};
+use anyhow::{anyhow, Result};
 
 
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum TokenSpec {
     Number,
-    Operator,
+    Operator(i8),
     Bracket,
     None,
 }
@@ -16,11 +17,10 @@ struct Token {
     cont: String,
 }
 
-fn split(expr: String) -> Vec<Token> {
-    println!("{:?}", expr);
+fn split(expr: String, operators: &HashMap<String, i8>) -> Result<Vec<Token>> {
     let bracks = ['(', ')'];
 
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Clone)]
     enum BuffMode {
         Digs,
         Ops,
@@ -29,7 +29,7 @@ fn split(expr: String) -> Vec<Token> {
 
     fn buffmodeToSpec(buffmode: BuffMode) -> TokenSpec {
         if buffmode == BuffMode::Digs { TokenSpec::Number } 
-        else if buffmode == BuffMode::Ops { TokenSpec::Operator }
+        else if buffmode == BuffMode::Ops { TokenSpec::Operator(-1) }
         else { TokenSpec::None }
     }
 
@@ -56,8 +56,8 @@ fn split(expr: String) -> Vec<Token> {
             }
 
             result.push(Token {
-                 spec: TokenSpec::Bracket, cont: c.to_string()
-                });
+                spec: TokenSpec::Bracket, cont: c.to_string()
+            });
                 buffmode = BuffMode::None;
             buf = String::new();
             continue;
@@ -68,8 +68,8 @@ fn split(expr: String) -> Vec<Token> {
                 if !c.is_ascii_digit() {
                     if !buf.is_empty() {
                         result.push(Token {
-                     spec: buffmodeToSpec(buffmode), cont: buf
-                    });
+                            spec: buffmodeToSpec(buffmode), cont: buf
+                        });
                     }
                     buf = String::new();
                     buffmode = BuffMode::Ops;
@@ -79,8 +79,8 @@ fn split(expr: String) -> Vec<Token> {
                 if c.is_ascii_digit() {
                     if !buf.is_empty() {
                         result.push(Token {
-                     spec: buffmodeToSpec(buffmode), cont: buf
-                    });
+                            spec: buffmodeToSpec(buffmode), cont: buf
+                        });
                     }
                     buf = String::new();
                     buffmode = BuffMode::Digs;
@@ -94,21 +94,47 @@ fn split(expr: String) -> Vec<Token> {
                 }
             }
         }
+
         buf.push(c);
+        
+        if buffmode == BuffMode::Ops && operators.contains_key(&buf) {
+            result.push(Token {
+                spec: buffmodeToSpec(buffmode.clone()), cont: buf
+            });
+            buf = String::new();
+        }
     }
 
-    result
+    for elem in result.iter_mut() {
+        if let TokenSpec::Operator(priority) = elem.spec {
+            if !operators.contains_key(&elem.cont) {
+                return Err(anyhow!("Unknow operator found. Expression likely contains errors.".to_string()));
+            } else {
+                elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().clone());
+            }
+        }
+    }
+
+    Ok(result)
 }
 
 fn main() {
-    let args : Vec<String> = env::args().collect();
+    let mut operators: HashMap<String, i8> = [
+        ("+", 1),
+        ("-", 1),
+        ("*", 2),
+        ("/", 2),
+        ("^", 3),
+        ("sqrt", 3),
+    ].into_iter().map(|(k, v)| { (k.to_string(), v) }).collect();
 
+    let args : Vec<String> = env::args().collect();
     if args.len() <= 1 {
         println!("no args!");
         return; 
     }
+    let args = args[1..].join("").replace(" ", "");
 
-    let args = args[1..].join("");
-    let mut items = split(args);
+    let mut items = split(args, &operators);
     print!("{:?}", items);
 }
