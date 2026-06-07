@@ -1,4 +1,3 @@
-i dont know what im doing
+Simple command line calculator, supposed to be called as a command.
 
-todo implement this
-https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+Supports basic operations, powers, and custom roots.
