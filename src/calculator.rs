@@ -183,7 +183,7 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
 fn parse(tokens: &Vec<Token>) -> Result<f64> {
     fn get_ops(stack: &mut VecDeque<f64>, op_count: u8) -> Result<Vec<f64>> {
         match op_count {
-            0 => return Ok(vec![] as Vec<f64>), // weird but ok
+            0 => return Ok(vec![] as Vec<f64>),
             1 => {
                 let op = stack.pop_back();
                 if op.is_some() {
@@ -201,7 +201,7 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                 }
             },
             _ => {
-                unreachable!(); // todo?
+                unreachable!();
             },
         }
     }
@@ -211,7 +211,9 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
     for tok in tokens {
         match tok.spec {
             TokenSpec::Number => {
-                stack.push_back(tok.cont.parse().unwrap());
+                let num = tok.cont.parse();
+                if num.is_err() { return Err(anyhow!("Invalid expression")); }
+                stack.push_back(num.unwrap());
             },
             TokenSpec::Operator(_) => {
                 match tok.cont.as_str() {
@@ -273,6 +275,9 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
         }
     }
 
+    if stack.is_empty() {
+        return Err(anyhow!("Invalid expression"));
+    }
     Ok(*stack.front().unwrap())
 }
 
