@@ -7,7 +7,8 @@ mod calculator;
 
 static mut STRING_POINTER: *mut c_char = 0 as *mut c_char;
 
-// this can be used by c# (didnt test c++ or c) to use the function for an actual use, returns ERROR_MSG sometimes
+// this stuff is for c# (didnt test c++ or c) to call rust code, returns ERROR_MSG sometimes
+//
 // !!
 // remember to call free_string() after each use
 // !!
