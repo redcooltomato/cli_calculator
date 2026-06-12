@@ -3,5 +3,9 @@ name = "cli_calculator"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name="calculator"
+crate-type = ["dylib"]
+
 [dependencies]
 anyhow = "1.0.102"

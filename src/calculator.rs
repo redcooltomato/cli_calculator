@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 use anyhow::{anyhow, Result};
 
-
+pub const ERROR_MSG: &str = "Invalid expression";
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum TokenSpec {
@@ -128,7 +128,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
     for elem in tokens.iter_mut() {
         if let TokenSpec::Operator(_) = elem.spec {
             if !operators.contains_key(&elem.cont) {
-                return Err(anyhow!("Invalid expression"));
+                return Err(anyhow!(ERROR_MSG));
             } else {
                 elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().clone());
             }
@@ -169,7 +169,7 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
                 stack.push_back(tok);
             },
             TokenSpec::None => {
-                return Err(anyhow!("Invalid expression"));
+                return Err(anyhow!(ERROR_MSG));
             }
         }
     }
@@ -189,7 +189,7 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                 if op.is_some() {
                     return Ok(vec![op.unwrap()]);
                 } else {
-                    return Err(anyhow!("Invalid expression"));
+                    return Err(anyhow!(ERROR_MSG));
                 }
             },
             2 => {
@@ -197,7 +197,7 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                 if op1.is_some() && op2.is_some() {
                     return Ok(vec![op1.unwrap(), op2.unwrap()]);
                 } else {
-                    return Err(anyhow!("Invalid expression"));
+                    return Err(anyhow!(ERROR_MSG));
                 }
             },
             _ => {
@@ -212,7 +212,7 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
         match tok.spec {
             TokenSpec::Number => {
                 let num = tok.cont.parse();
-                if num.is_err() { return Err(anyhow!("Invalid expression")); }
+                if num.is_err() { return Err(anyhow!(ERROR_MSG)); }
                 stack.push_back(num.unwrap());
             },
             TokenSpec::Operator(_) => {
@@ -268,15 +268,15 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
                         let ops = ops.unwrap();
                         stack.push_back(ops[0].powf(ops[1]));
                     }
-                    _ => return Err(anyhow!("Invalid expression")),
+                    _ => return Err(anyhow!(ERROR_MSG)),
                 }
             },
-            _ => return Err(anyhow!("Invalid expression")),
+            _ => return Err(anyhow!(ERROR_MSG)),
         }
     }
 
     if stack.is_empty() {
-        return Err(anyhow!("Invalid expression"));
+        return Err(anyhow!(ERROR_MSG));
     }
     Ok(*stack.front().unwrap())
 }
