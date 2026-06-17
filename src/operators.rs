@@ -1,4 +1,4 @@
-use std::{collections::HashMap, result};
+use std::{collections::HashMap};
 
 use anyhow::{anyhow, Result};
 
@@ -6,7 +6,7 @@ pub struct Operator {
     name: String,
     precedence: i8,
     arity: u8,
-    operateFn: fn(Vec<f64>) -> Result<f64>,
+    operate_fn: fn(Vec<f64>) -> Result<f64>,
 }
 
 impl Operator {
@@ -19,34 +19,34 @@ impl Operator {
             return Err(anyhow!("Wrong ammount of arguments"));
         }
 
-        ((self.operateFn)(args))
+        (self.operate_fn)(args)
     }
 }
 
 pub fn get_all_operators() -> HashMap<String, Operator> {
     let operators: Vec<Operator> = Vec::from([
-        Operator { name: "+".to_string(), precedence: 1, arity: 2, operateFn: |args| {
+        Operator { name: "+".to_string(), precedence: 1, arity: 2, operate_fn: |args| {
             Ok(args[0] + args[1])
         }},
-        Operator { name: "-".to_string(), precedence: 1, arity: 2, operateFn: |args| {
+        Operator { name: "-".to_string(), precedence: 1, arity: 2, operate_fn: |args| {
             Ok(args[0] - args[1])
         }},
-        Operator { name: "*".to_string(), precedence: 2, arity: 2, operateFn: |args| {
+        Operator { name: "*".to_string(), precedence: 2, arity: 2, operate_fn: |args| {
             Ok(args[0] * args[1])
         }},
-        Operator { name: "/".to_string(), precedence: 2, arity: 2, operateFn: |args| {
+        Operator { name: "/".to_string(), precedence: 2, arity: 2, operate_fn: |args| {
             if args[1] == 0.0 { Err(anyhow!("Division by zero")) }
             else { Ok(args[0] / args[1]) }
         }},
-        Operator { name: "rt".to_string(), precedence: 3, arity: 2, operateFn: |args| {
+        Operator { name: "rt".to_string(), precedence: 3, arity: 2, operate_fn: |args| {
             if args[1] < 0.0 && (args[0] % 2.0 == 0.0) { Err(anyhow!("Can't get an even root of a negative number")) }
             else { Ok(args[1].powf(1.0 / args[0])) }
         }},
-        Operator { name: "sqrt".to_string(), precedence: 3, arity: 1, operateFn: |args| {
+        Operator { name: "sqrt".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
             if args[1] < 0.0 { Err(anyhow!("Can't get a square root of a negative number")) }
             else { Ok(args[1].powf(1.0 / args[0])) }
         }},
-        Operator { name: "^".to_string(), precedence: 3, arity: 2, operateFn: |args| {
+        Operator { name: "^".to_string(), precedence: 3, arity: 2, operate_fn: |args| {
             Ok(args[0].powf(args[1]))
         }},
     ]);

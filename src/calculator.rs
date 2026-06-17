@@ -145,7 +145,6 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
     let mut stack: VecDeque<Token> = VecDeque::new();
     let left_par = "(".to_owned(); // it is used too often here, idk
 
-
     for tok in tokens {
         match tok.spec {
             TokenSpec::Number => {
@@ -203,7 +202,7 @@ fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f
                 }
             },
             _ => {
-                unreachable!();
+                unreachable!(); // unrequired
             },
         }
     }
@@ -232,6 +231,7 @@ fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f
                     if res.is_err() {
                         return Err(res.unwrap_err());
                     }
+                    
                     stack.push_back(res.unwrap());
                 }
             },
