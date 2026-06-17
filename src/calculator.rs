@@ -1,7 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 use anyhow::{anyhow, Result};
 
-pub const ERROR_MSG: &str = "Invalid expression";
+use crate::operators::{Operator, get_all_operators};
+
+pub const DEFAULT_ERROR_MSG: &str = "Invalid expression";
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 enum TokenSpec {
@@ -26,7 +28,7 @@ struct Token {
     cont: String,
 }
 
-fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>> {
+fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<Token>> {
     let bracks = ['(', ')'];
 
     #[derive(PartialEq, Clone)]
@@ -128,9 +130,9 @@ fn tokenize(expr: &String, operators: &HashMap<String, i8>) -> Result<Vec<Token>
     for elem in tokens.iter_mut() {
         if let TokenSpec::Operator(_) = elem.spec {
             if !operators.contains_key(&elem.cont) {
-                return Err(anyhow!(ERROR_MSG));
+                return Err(anyhow!(DEFAULT_ERROR_MSG));
             } else {
-                elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().clone());
+                elem.spec = TokenSpec::Operator(operators.get(&elem.cont).unwrap().precedence());
             }
         }
     }
@@ -169,7 +171,7 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
                 stack.push_back(tok);
             },
             TokenSpec::None => {
-                return Err(anyhow!(ERROR_MSG));
+                return Err(anyhow!(DEFAULT_ERROR_MSG));
             }
         }
     }
@@ -180,24 +182,24 @@ fn convert_to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>> {
     Ok(to_parse)
 }
 
-fn parse(tokens: &Vec<Token>) -> Result<f64> {
-    fn get_ops(stack: &mut VecDeque<f64>, op_count: u8) -> Result<Vec<f64>> {
-        match op_count {
+fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f64> {
+    fn get_args(stack: &mut VecDeque<f64>, arg_count: u8) -> Result<Vec<f64>> {
+        match arg_count {
             0 => return Ok(vec![] as Vec<f64>),
             1 => {
-                let op = stack.pop_back();
-                if op.is_some() {
-                    return Ok(vec![op.unwrap()]);
+                let arg = stack.pop_back();
+                if arg.is_some() {
+                    return Ok(vec![arg.unwrap()]);
                 } else {
-                    return Err(anyhow!(ERROR_MSG));
+                    return Err(anyhow!(DEFAULT_ERROR_MSG));
                 }
             },
             2 => {
-                let (op2, op1) = (stack.pop_back(), stack.pop_back());
-                if op1.is_some() && op2.is_some() {
-                    return Ok(vec![op1.unwrap(), op2.unwrap()]);
+                let (arg2, arg1) = (stack.pop_back(), stack.pop_back());
+                if arg1.is_some() && arg2.is_some() {
+                    return Ok(vec![arg1.unwrap(), arg2.unwrap()]);
                 } else {
-                    return Err(anyhow!(ERROR_MSG));
+                    return Err(anyhow!(DEFAULT_ERROR_MSG));
                 }
             },
             _ => {
@@ -212,85 +214,39 @@ fn parse(tokens: &Vec<Token>) -> Result<f64> {
         match tok.spec {
             TokenSpec::Number => {
                 let num = tok.cont.parse();
-                if num.is_err() { return Err(anyhow!(ERROR_MSG)); }
+                if num.is_err() { return Err(anyhow!(DEFAULT_ERROR_MSG)); }
                 stack.push_back(num.unwrap());
             },
             TokenSpec::Operator(_) => {
-                match tok.cont.as_str() {
-                    "+" => {
-                        let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        stack.push_back(ops[0] + ops[1]);
-                    },
-                    "-" => {
-                        let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        stack.push_back(ops[0] - ops[1]);
-                    },
-                    "*" => {
-                        let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        stack.push_back(ops[0] * ops[1]);
-                    },
-                    "/" => {
-                       let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        if ops[1] == 0.0 {
-                            return Err(anyhow!("Can't divide by zero"));
-                        }
-                        stack.push_back(ops[0] / ops[1]);
-                    },
-                    "rt" => {
-                        let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        if ops[1] < 0.0 && (ops[0] % 2.0 == 0.0) {
-                            return Err(anyhow!("Can't get an even root of a negative number"));
-                        }
-                        stack.push_back(ops[1].powf(1.0 / ops[0]));
-                    },
-                    "sqrt" => {
-                        let ops = get_ops(&mut stack, 1);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        if ops[0] < 0.0 {
-                            return Err(anyhow!("Can't get a square root of a negative number"));
-                        }
-                        stack.push_back(ops[0].sqrt() as f64);
-                    },
-                    "^" => {
-                        let ops = get_ops(&mut stack, 2);
-                        if ops.is_err() {  return Err(ops.unwrap_err()); }
-                        let ops = ops.unwrap();
-                        stack.push_back(ops[0].powf(ops[1]));
+                if !operators.contains_key(&tok.cont) {
+                    return Err(anyhow!(DEFAULT_ERROR_MSG));
+                } else {
+                    let op = operators.get(&tok.cont).unwrap();
+
+                    let args = get_args(&mut stack, op.arity());
+                    if args.is_err() {
+                        return Err(args.unwrap_err());
                     }
-                    _ => return Err(anyhow!(ERROR_MSG)),
+
+                    let res = op.operate(args.unwrap());
+                    if res.is_err() {
+                        return Err(res.unwrap_err());
+                    }
+                    stack.push_back(res.unwrap());
                 }
             },
-            _ => return Err(anyhow!(ERROR_MSG)),
+            _ => return Err(anyhow!(DEFAULT_ERROR_MSG)),
         }
     }
 
     if stack.is_empty() {
-        return Err(anyhow!(ERROR_MSG));
+        return Err(anyhow!(DEFAULT_ERROR_MSG));
     }
     Ok(*stack.front().unwrap())
 }
 
 pub fn calculate_expression(expr: &String) -> Result<f64> {
-    let operators: HashMap<String, i8> = [
-        ("+", 1),
-        ("-", 1),
-        ("*", 2),
-        ("/", 2),
-        ("rt", 3),
-        ("sqrt", 3),
-        ("^", 3),
-    ].into_iter().map(|(k, v)| { (k.to_owned(), v) }).collect();
+    let operators: HashMap<String, Operator> = get_all_operators();
 
     let tokens = tokenize(&expr, &operators);
     if tokens.is_err() {
@@ -304,7 +260,7 @@ pub fn calculate_expression(expr: &String) -> Result<f64> {
     }
     let to_parse = to_parse.unwrap();
     
-    let answer = parse(&to_parse);
+    let answer = parse(&to_parse, &operators);
     if answer.is_err() {
         return Err(answer.unwrap_err());
     }

@@ -1,8 +1,8 @@
 use std::env;
+
 use crate::calculator::calculate_expression;
-
 mod calculator;
-
+mod operators;
 
 fn main() {
     let args : Vec<String> = env::args().collect();
