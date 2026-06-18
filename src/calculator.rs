@@ -44,6 +44,10 @@ fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<
         else { TokenSpec::None }
     }
 
+    fn is_part_of_num(c: char) -> bool {
+        c.is_ascii_digit() || c == '.'
+    }
+
     let mut buf = String::new();
     let mut buffmode: BuffMode = BuffMode::None;
 
@@ -76,7 +80,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<
 
         match buffmode {
             BuffMode::Digs => {
-                if !c.is_ascii_digit() && c != '.' {
+                if !is_part_of_num(c) {
                     if !buf.is_empty() {
                         tokens.push(Token {
                             spec: buff_mode_to_spec(buffmode), cont: buf
@@ -87,7 +91,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<
                 }
             },
             BuffMode::Ops => {
-                if c.is_ascii_digit() || c == '.' {
+                if is_part_of_num(c) {
                     if !buf.is_empty() {
                         tokens.push(Token {
                             spec: buff_mode_to_spec(buffmode), cont: buf
