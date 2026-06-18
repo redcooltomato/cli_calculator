@@ -76,7 +76,7 @@ fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<
 
         match buffmode {
             BuffMode::Digs => {
-                if !c.is_ascii_digit() || c == '.' {
+                if !c.is_ascii_digit() && c != '.' {
                     if !buf.is_empty() {
                         tokens.push(Token {
                             spec: buff_mode_to_spec(buffmode), cont: buf
@@ -231,11 +231,11 @@ fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f
                     if res.is_err() {
                         return Err(res.unwrap_err());
                     }
-                    
+
                     stack.push_back(res.unwrap());
                 }
             },
-            _ => return Err(anyhow!(DEFAULT_ERROR_MSG)),
+            _ => unreachable!(),
         }
     }
 

@@ -49,6 +49,15 @@ pub fn get_all_operators() -> HashMap<String, Operator> {
         Operator { name: "^".to_string(), precedence: 3, arity: 2, operate_fn: |args| {
             Ok(args[0].powf(args[1]))
         }},
+        Operator { name: "sin".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
+            Ok(args[0].to_radians().sin())
+        }},
+        Operator { name: "cos".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
+            Ok(args[0].to_radians().cos())
+        }},
+        Operator { name: "tan".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
+            Ok(args[0].to_radians().tan())
+        }},
     ]);
 
     let mut result: HashMap<String, Operator> = HashMap::new();
