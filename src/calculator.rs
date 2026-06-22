@@ -122,7 +122,8 @@ fn tokenize(expr: &String, operators: &HashMap<String, Operator>) -> Result<Vec<
 
     let mut new_tokens: Vec<Token> = Vec::new();
     for i in 0..(tokens.len() - 1) {
-        if &tokens[i].cont == "-" && tokens[i + 1].spec == TokenSpec::Number {
+        if &tokens[i].cont == "-" && tokens[i + 1].spec == TokenSpec::Number 
+        && (i > 0 && matches!(&tokens[i - 1].spec, TokenSpec::Operator(_)) || i == 0) {
             tokens[i + 1].cont.insert(0, '-');
         } else {
             new_tokens.push(tokens[i].clone());
@@ -226,17 +227,15 @@ fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f
                 } else {
                     let op = operators.get(&tok.cont).unwrap();
 
-                    let args = get_args(&mut stack, op.arity());
-                    if args.is_err() {
-                        return Err(args.unwrap_err());
+                    let args = get_args(&mut stack, op.arity())?;
+
+                    if (args.len() as u8) != op.arity() {
+                        return Err(anyhow!(DEFAULT_ERROR_MSG));
                     }
 
-                    let res = op.operate(args.unwrap());
-                    if res.is_err() {
-                        return Err(res.unwrap_err());
-                    }
+                    let res = op.operate(args)?;
 
-                    stack.push_back(res.unwrap());
+                    stack.push_back(res);
                 }
             },
             _ => unreachable!(),
@@ -252,23 +251,12 @@ fn parse(tokens: &Vec<Token>, operators: &HashMap<String, Operator>) -> Result<f
 pub fn calculate_expression(expr: &String) -> Result<f64> {
     let operators: HashMap<String, Operator> = get_all_operators();
 
-    let tokens = tokenize(&expr, &operators);
-    if tokens.is_err() {
-        return Err(tokens.unwrap_err());
-    }
-    let tokens = tokens.unwrap();
+    let expr = expr.replace(" ", "");
+    let tokens = tokenize(&expr, &operators)?;
     
-    let to_parse = convert_to_rpn(tokens);
-    if to_parse.is_err() {
-        return Err(to_parse.unwrap_err());
-    }
-    let to_parse = to_parse.unwrap();
+    let to_parse = convert_to_rpn(tokens)?;
     
-    let answer = parse(&to_parse, &operators);
-    if answer.is_err() {
-        return Err(answer.unwrap_err());
-    }
-    let answer = answer.unwrap();
+    let answer = parse(&to_parse, &operators)?;
 
     Ok(answer)
 }

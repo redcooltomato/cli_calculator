@@ -1,9 +1,12 @@
 use std::os::raw::c_char;
 use std::ffi::{CStr, CString};
-
 use crate::calculator::{calculate_expression};
+
 mod calculator;
 mod operators;
+
+#[cfg(test)]
+mod tests;
 
 static mut STRING_POINTER: *mut c_char = 0 as *mut c_char;
 
@@ -16,9 +19,9 @@ fn store_string_on_heap(string_to_store: &str) -> *mut c_char {
 }
 
 // this stuff is for c# (didnt test c++ or c) to call rust code, returns errors sometimes
-//
+
 // !!
-// remember to call free_string() after each use
+// !! remember to call free_string() after each use
 // !!
 
 #[unsafe(no_mangle)]

@@ -1,22 +1,27 @@
 use std::env;
-
 use crate::calculator::calculate_expression;
+
 mod calculator;
 mod operators;
 
+#[cfg(test)]
+mod tests;
+
 fn main() {
-    let args : Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() <= 1 {
         println!("no args!");
         return; 
     }
-    let expr = args[1..].join("").replace(" ", "");
+    let expr = args[1..].join("");
 
-    let answer = calculate_expression(&expr);
-    if answer.is_err() {
-        println!("{}", answer.unwrap_err()); return;
-    }
-    let answer = answer.unwrap();
+    let answer =  match calculate_expression(&expr) {
+        Ok(ans) => ans,
+        Err(e) => {
+            eprintln!("{}", e);
+            return;
+        },
+    };
 
     println!("{}", answer);
 }

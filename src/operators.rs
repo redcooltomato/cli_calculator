@@ -10,7 +10,7 @@ pub struct Operator {
 }
 
 impl Operator {
-    pub fn name(&self) -> &str { &self.name }
+    /* pub fn name(&self) -> &str { &self.name } */ // so rustc doesnt yap
     pub fn precedence(&self) -> i8 { self.precedence }
     pub fn arity(&self) -> u8 { self.arity }
 
@@ -43,8 +43,8 @@ pub fn get_all_operators() -> HashMap<String, Operator> {
             else { Ok(args[1].powf(1.0 / args[0])) }
         }},
         Operator { name: "sqrt".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
-            if args[1] < 0.0 { Err(anyhow!("Can't get a square root of a negative number")) }
-            else { Ok(args[1].powf(1.0 / args[0])) }
+            if args[0] < 0.0 { Err(anyhow!("Can't get a square root of a negative number")) }
+            else { Ok(args[0].sqrt()) }
         }},
         Operator { name: "^".to_string(), precedence: 3, arity: 2, operate_fn: |args| {
             Ok(args[0].powf(args[1]))
@@ -59,13 +59,13 @@ pub fn get_all_operators() -> HashMap<String, Operator> {
             Ok(args[0].to_radians().tan())
         }},
         Operator { name: "asin".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
-            Ok(args[0].asin())
+            Ok(args[0].asin().to_degrees())
         }},
         Operator { name: "acos".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
-            Ok(args[0].acos())
+            Ok(args[0].acos().to_degrees())
         }},
         Operator { name: "atan".to_string(), precedence: 3, arity: 1, operate_fn: |args| {
-            Ok(args[0].atan())
+            Ok(args[0].atan().to_degrees())
         }},
     ]);
 
