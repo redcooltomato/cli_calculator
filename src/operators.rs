@@ -2,6 +2,7 @@ use std::{collections::HashMap};
 
 use anyhow::{anyhow, Result};
 
+#[derive(Clone)]
 pub struct Operator {
     name: String,
     precedence: i8,
@@ -10,7 +11,7 @@ pub struct Operator {
 }
 
 impl Operator {
-    /* pub fn name(&self) -> &str { &self.name } */ // so rustc doesnt yap
+    pub fn name(&self) -> &str { &self.name }
     pub fn precedence(&self) -> i8 { self.precedence }
     pub fn arity(&self) -> u8 { self.arity }
 

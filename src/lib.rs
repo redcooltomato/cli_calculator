@@ -18,10 +18,10 @@ fn store_string_on_heap(string_to_store: &str) -> *mut c_char {
     return pntr;
 }
 
-// this stuff is for c# (didnt test c++ or c) to call rust code, returns errors sometimes
+// this stuff is for c# (didnt test c++ or c) to call rust code, returns errors as strings sometimes
 
 // !!
-// !! remember to call free_string() after each use
+// !! remember free memory via free_string()
 // !!
 
 #[unsafe(no_mangle)]
